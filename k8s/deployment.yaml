@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todos-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todos-api
+  template:
+    metadata:
+      name: todos-api
+      labels:
+        app: todos-api
+    spec:
+      containers:
+        - image: triathlonguy/todos-api:latest
+          name: todos-api
+          ports:
+            - containerPort: 8082
+              protocol: TCP
+          env:
+            - name: CACHEURL
+              value: "http://todos-redis.default.svc.cluster.local:8888"
+            - name: BACKENDURL
+              value: "http://todos-mysql.default.svc.cluster.local:9090"
