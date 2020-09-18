@@ -79,15 +79,26 @@ todos-webui                         LoadBalancer   10.0.14.60    104.197.8.27   
 ./setup/remove-app.sh -- kubectl-based removal for 4 services for the TODO app
 ```
 
-## Compiling, Build Image and Run the TODOS-API
+## Compiling and Building and Image for the TODOS-API
 The application is configured by default with Java 8 in the Maven pom.xml file. You can update it to Java 11 or Java 14 if you choose to do so.
 
-Start clean by checking that no todos-api images exist on your machine by executing
+__Local development__
+
+The app can be built and started locally from the command-line or from withing an IDE
+```shell
+./mvnw clean package
+```
+
+__Images__
+
+To build and run Docker images, start clean by checking that no todos-api images exist on your machine by executing
 ```shell
 docker images | grep todos-api | awk '{print $3}' | xargs docker rmi -f
 ```
 
-To compile the code and build the image, this repo illustrates 3 methods. A pre-built image has already been provisioned in Docker Hub at this [todos-api link](https://hub.docker.com/repository/docker/triathlonguy/todos-api) and can be retrieved by executing ```docker pull triathlonguy/todos-api:latest```
+To compile the code and build an image for ```todos-api```, this repo illustrates 3 methods. 
+
+A pre-built image has already been provisioned in Docker Hub at this [todos-api link](https://hub.docker.com/repository/docker/triathlonguy/todos-api) and can be retrieved by executing ```docker pull triathlonguy/todos-api:latest```
 
 __1. Maven and Docker__
 ```shell
@@ -115,7 +126,28 @@ skaffold build
 docker images | grep todos-api
 ```
 
-## Developing & Debugging in K8s with Skaffold
+## Running TODOS-API in a local environment
+The app can be built and started locally from the command-line or from withing an IDE
+```shell
+./mvnw clean package
+java -jar target/todos-api-1.0.0-SNAPSHOT.jar 
+
+# requests can be sent to localhost:8082
+# /src/main/resources/application.yaml needs to be updated with the endpoints of the cache, respectively database
+```
+
+## Deploying TODOS-API in Kubernetes using kubectl
+The app can be deployed and started in any Kubernetes environment using kubectl 
+```shell
+kubectl apply -f kubernetes/app
+```
+
+Removing the ```todos-api``` deployment can be done by executing
+```shell
+kubectl delete -f kubernetes/app
+```
+
+## Deploying, Developing & Debugging in Kubernetes with Skaffold
 Skaffold is a command line tool that facilitates continuous development for Kubernetes applications. It simplifies the development process by combining multiple steps into one easy command and provides the building blocks for a CI/CD process.
 
 Developers can use Skaffold to manage the development lifecycle of the todos-api by executing
@@ -142,7 +174,7 @@ Connected to the target VM, address: 'localhost:5005', transport: 'socket'
 ```
 
 
-## Externalized Configurations when Developing in K8s with Skaffold & Kustomize
+## Deploying, Developing & Debugging in Kubernetes with Externalized Configurations using Skaffold & Kustomize
 * One of the [12 factors for cloud native apps is to externalize configuration](https://12factor.net/config)
 * Kubernetes provides support for externalizing configuration via config maps and secrets
 * A config map or secret can easily be created using kubectl
@@ -169,3 +201,141 @@ pod/todos-api-7f795466ff-7gp5w             1/1     Running   0          9s
 pod/todos-api-7f795466ff-k9jkx             1/1     Running   0          10s
 ```
 
+## Usage Examples for Application & Actuator endpoints
+Once the app is deployed in Kubernetes, please retrieve the endpoint at which ```todos-api``` is exposed
+```shell
+kubectl get svc
+
+# example
+NAME      TYPE           CLUSTER-IP    EXTERNAL-IP       PORT(S)          AGE
+todos-api LoadBalancer   10.0.13.177   35.193.98.123     8082:31783/TCP   15m
+```
+To ```add a new TODO item```, say ```todo0``` execute:
+```shell
+http <external_svc_ip>:8082 completed=false title=todo0 category=personal deadline=2020/10/01
+
+http 35.193.98.123:8082 completed=false title=todo0 category=personal deadline=2020/10/01
+
+{
+    "category": "personal",
+    "complete": false,
+    "deadline": "2020/10/01",
+    "id": "0d892025-8425-4af4-bf72-979a02b3d4bc",
+    "title": "todo0"
+}
+```
+
+To ```retrieve all TODO items``` execute:
+```shell
+http <external_svc_ip>:8082
+
+http 35.193.98.123:8082
+# or 
+curl 35.193.98.123:8082
+
+[
+    {
+        "category": "personal",
+        "complete": false,
+        "deadline": "2020/10/01",
+        "id": "0d892025-8425-4af4-bf72-979a02b3d4bc",
+        "title": "todo0"
+    },
+    {
+        "category": "Default group",
+        "complete": false,
+        "deadline": "2020/09/14",
+        "id": "cc56f488-57df-447d-a161-e59ed21bb230",
+        "title": "todo1"
+    }
+]
+```
+
+To ```retrieve a TODO item by {id}``` execute:
+```shell
+http <external_svc_ip>:8082/{id}
+
+http 35.193.98.123:8082/0d892025-8425-4af4-bf72-979a02b3d4bc
+# or 
+curl 35.193.98.123:8082/0d892025-8425-4af4-bf72-979a02b3d4bc
+
+{
+    "category": "personal",
+    "complete": false,
+    "deadline": "2020/10/01",
+    "id": "0d892025-8425-4af4-bf72-979a02b3d4bc",
+    "title": "todo0"
+}
+```
+
+To retrieve the ```customized Info Actuator``` data execute
+```shell
+http <external_svc_ip>:8082/actuator/info
+
+http 35.193.98.123:8082/actuator/info
+# or
+curl 35.193.98.123:8082/actuator/info
+
+{
+    "app": {
+        "description": "TODOs - API - business logic w/ DB and cache access",
+        "name": "todos-api - Spring Boot Application"
+    }
+}
+```
+
+To retrieve the ```customized Health Actuator``` data execute
+```shell
+http <external_svc_ip>:8082/actuator/health
+
+http 35.193.98.123:8082/actuator/health
+# or
+curl 35.193.98.123:8082/actuator/health
+
+{
+    "components": {
+        "customHealthCheck": {
+            "details": {
+                "Custom Health Check Status": "passed"
+            },
+            "status": "UP"
+        },
+        "diskSpace": {
+            "details": {
+                "exists": true,
+                "free": 80728559616,
+                "threshold": 10485760,
+                "total": 101241290752
+            },
+            "status": "UP"
+        },
+        "livenessState": {
+            "status": "UP"
+        },
+        "ping": {
+            "status": "UP"
+        },
+        "readinessState": {
+            "status": "UP"
+        }
+    },
+    "groups": [
+        "liveness",
+        "readiness"
+    ],
+    "status": "UP"
+}
+```
+
+To access a ```Custom Actuator``` introduced for educational purposes execute
+```shell
+http <external_svc_ip>:8082/actuator/custom
+
+http 35.193.98.123:8082/actuator/custom
+# or
+curl 35.193.98.123:8082/actuator/custom
+
+{
+    "CustomEndpoint": "Everything looks good at the custom endpoint"
+}
+```
