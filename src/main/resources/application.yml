@@ -5,12 +5,11 @@ todos:
 logging:
   level:
     org:
-      springframework: DEBUG
+      springframework: INFO
 
-# running locally and connecting to backens in k8s?
-# set the 2 properties below
-cacheUrl: "http://104.154.253.234:8888"
-backendUrl: "http://35.223.204.37:9090"
+# running locally and connecting to backend in k8s
+cacheUrl: "http://todos-redis.default.svc.cluster.local:8888"
+backendUrl: "http://todos-mysql.default.svc.cluster.local:9090"
 
 spring:
   application:
@@ -32,5 +31,6 @@ info:
   app:
     name: todos-api - Spring Boot Application
     description: TODOs - API - business logic w/ DB and cache access
-server:
-  port: 8082
+# Use default 8080 port
+# server:
+#   port: 8082
