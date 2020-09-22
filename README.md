@@ -56,7 +56,8 @@ This repo contains 4 scripts for setting up, respectively cleaning up pre-requis
 ```shell
 # Setup - please run in order
 ./setup/install-tools.sh -- Helm chart based installer for caching and database
-./setup/setup-app.sh -- kubectl-based deployment for 4 services for the TODO app
+cd setup
+./setup-app.sh -- kubectl-based deployment for 4 services for the TODO app
 
 # installation can be validated by checking all running services in K8s
 kubectl get services
